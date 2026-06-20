@@ -1,5 +1,10 @@
 import { relativeTime, titleCase } from "@/lib/format";
-import type { AccessEvent, AttributeKey, Org } from "@/lib/types";
+import {
+  ATTRIBUTE_KEYS,
+  type AccessEvent,
+  type AttributeKey,
+  type Org,
+} from "@/lib/types";
 import { EyeIcon } from "./icons";
 
 type GroupedAccess = {
@@ -8,13 +13,23 @@ type GroupedAccess = {
   fields: AttributeKey[];
 };
 
-function groupEventsByOrg(events: AccessEvent[]): GroupedAccess[] {
-  const grouped = new Map<string, GroupedAccess>();
+function sortFields(fields: AttributeKey[]) {
+  return [...fields].sort(
+    (left, right) => ATTRIBUTE_KEYS.indexOf(left) - ATTRIBUTE_KEYS.indexOf(right),
+  );
+}
+
+function groupEventsByPermissionTuple(events: AccessEvent[]): GroupedAccess[] {
+  // All attribute rows written by one search RPC share the same PostgreSQL
+  // transaction timestamp. Reconstruct that read first, then collapse repeated
+  // reads only when both the organization and exact field tuple are unchanged.
+  const reads = new Map<string, GroupedAccess>();
 
   for (const event of events) {
-    const existing = grouped.get(event.orgId);
+    const readKey = `${event.orgId}:${event.accessedAt}`;
+    const existing = reads.get(readKey);
     if (!existing) {
-      grouped.set(event.orgId, {
+      reads.set(readKey, {
         orgId: event.orgId,
         latestAccessedAt: event.accessedAt,
         fields: [event.attributeKey],
@@ -25,12 +40,19 @@ function groupEventsByOrg(events: AccessEvent[]): GroupedAccess[] {
     if (!existing.fields.includes(event.attributeKey)) {
       existing.fields.push(event.attributeKey);
     }
-    if (event.accessedAt > existing.latestAccessedAt) {
-      existing.latestAccessedAt = event.accessedAt;
+  }
+
+  const tuples = new Map<string, GroupedAccess>();
+  for (const read of reads.values()) {
+    const fields = sortFields(read.fields);
+    const tupleKey = `${read.orgId}:${fields.join(",")}`;
+    const existing = tuples.get(tupleKey);
+    if (!existing || read.latestAccessedAt > existing.latestAccessedAt) {
+      tuples.set(tupleKey, { ...read, fields });
     }
   }
 
-  return Array.from(grouped.values()).sort((a, b) =>
+  return Array.from(tuples.values()).sort((a, b) =>
     b.latestAccessedAt.localeCompare(a.latestAccessedAt),
   );
 }
@@ -42,14 +64,17 @@ export function AccessLogFeed({
   events: AccessEvent[];
   orgs: Org[];
 }) {
-  const groupedEvents = groupEventsByOrg(events);
+  const groupedEvents = groupEventsByPermissionTuple(events);
 
   return (
     <div className="access-feed">
       {groupedEvents.map((event) => {
         const org = orgs.find((item) => item.id === event.orgId);
         return (
-          <div className="access-event" key={event.orgId}>
+          <div
+            className="access-event"
+            key={`${event.orgId}:${event.fields.join(",")}`}
+          >
             <div className="event-icon">
               <EyeIcon />
             </div>

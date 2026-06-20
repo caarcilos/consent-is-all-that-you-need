@@ -77,7 +77,7 @@ The organization and participant selectors simulate roles *inside* the visitor�
 - [`supabase/migrations/003_seed_synthetic_data.sql`](supabase/migrations/003_seed_synthetic_data.sql) — resettable fixture and RPC boundary.
 - [`components/OrgSearchClient.tsx`](components/OrgSearchClient.tsx) — consent-aware organization search.
 - [`components/ParticipantViewClient.tsx`](components/ParticipantViewClient.tsx) — profile and grant management.
-- [`components/AccessLogFeed.tsx`](components/AccessLogFeed.tsx) — organization-level audit presentation. The database records attribute reads; the UI groups them by organization.
+- [`components/AccessLogFeed.tsx`](components/AccessLogFeed.tsx) — permission-snapshot audit presentation. The database records attribute reads; the UI groups repeated reads only when the organization and exact field tuple match.
 - [`lib/policy.ts`](lib/policy.ts) and [`lib/visibleProfile.ts`](lib/visibleProfile.ts) — presentational mirrors of the policy, never the security boundary.
 
 ## Run locally
@@ -95,7 +95,7 @@ Open [http://localhost:3000](http://localhost:3000). Without Supabase environmen
 
 - RLS is enabled on every demo table.
 - RPCs verify workspace ownership with `auth.uid()` before accepting a simulated actor.
-- Organization reads are logged per attribute; the participant UI coalesces them into one row per organization.
+- Organization reads are logged per attribute; the participant UI reconstructs each read’s field tuple and coalesces only repeated organization + tuple combinations.
 - Revocation affects the next database read. It cannot recall data already delivered, copied, cached, or screenshotted.
 - Anonymous workspaces are intentionally disposable. There is no account recovery or cross-device continuity.
 - External search indexes, exports, privileged administration, retention policy, and abuse controls would require separate security decisions.
