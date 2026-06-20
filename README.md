@@ -1,18 +1,35 @@
 # consent-lens
 
-> A small, opinionated exploration of the access-and-consent problem, because it seemed like the crux of a shared cross-org talent database. I made strong choices to keep it concrete — happy to be wrong about your real constraints.
+> A small, opinionated exploration of the access-and-consent problem, because it seemed like the crux of a shared cross-organization talent database. I made strong choices to keep it concrete—happy to be wrong about the real constraints.
 
-Most talent systems are black boxes about who can see a person’s data. `consent-lens` makes the permission model the product: organizations see only fields a participant granted them, participants see exactly who can see what and why, and reads are visible to the person they concern.
+Most talent systems are black boxes about who can see a person’s data. `consent-lens` makes the permission model visible: organizations see only fields a participant granted them, participants can inspect and change those grants, and organization reads appear in the participant’s audit trail.
 
-This is intentionally a tight slice. It uses eight synthetic participants and three fictional organizations to make one hard thing inspectable rather than pretending to be a complete ATS.
+This is deliberately a narrow technical slice, not an ATS. It uses eight synthetic participants and three fictional organizations to make the authorization model easy to inspect.
 
-Each visitor signs in anonymously through Supabase and receives an isolated copy of that synthetic dataset. Profile edits, organization renames, consent grants, revocations, searches, and access logs persist across refreshes in that browser. **Reset demo** restores only that visitor’s copy.
+## What to try
 
-## The modeling decision
+### Organization view
 
-PostgreSQL row-level security protects rows, not individual columns. A conventional wide `participants` table would therefore force field-level permissions into application filtering.
+- Switch between fictional organizations and compare the same participant across tenants.
+- Search for `biosecurity` as Aqueduct and then Beacon. Only Beacon can find Jon because only Beacon has access to that field.
+- See ungranted fields as locked placeholders without receiving their values.
+- Rename an organization inside your private demo workspace.
 
-Here, each profile field is a row in `participant_attributes`:
+### Participant view
+
+- Edit a synthetic profile and refresh the page to confirm persistence.
+- Grant or revoke individual fields in the organization × field matrix.
+- Return to the organization view and see the permission change immediately.
+- Inspect which organizations viewed the profile and which fields they received.
+- Use **Reset demo** to restore only your workspace to the original fixture.
+
+Each browser signs in anonymously through Supabase and receives an isolated copy of the synthetic dataset. Changes persist across refreshes but do not affect other visitors.
+
+## The core modeling decision
+
+PostgreSQL row-level security protects rows, not individual columns. A conventional wide profile row would force field-level authorization into application filtering.
+
+Instead, profile fields are stored as rows:
 
 ```text
 participant_id   key        value                    sensitivity
@@ -20,60 +37,130 @@ maya-k           skills     Evaluations · Python     standard
 maya-k           email      maya.k@example.test      sensitive
 ```
 
-A consent grant addresses one of those rows by `(participant, org, attribute_key)`, or uses `*` for all fields. RLS can then answer “may this org see this field?” directly. The database is the gate; TypeScript only renders the already-authorized result.
+A consent grant identifies `(participant, organization, attribute_key)`, with `*` available as a wildcard. PostgreSQL can therefore answer “may this organization read this field?” as an RLS predicate.
 
-That also makes search consent-respecting by construction. Search runs over the RLS-filtered attribute rows, so an organization cannot match, filter, or rank on a field it was not granted.
+This has two useful consequences:
 
-## What is here
+1. **The database is the gate.** TypeScript shapes the authorized response and renders locked placeholders; it does not decide which values are returned.
+2. **Search respects consent by construction.** Search runs over the RLS-filtered attribute relation, so hidden fields cannot produce matches, counts, or ranking signals.
 
-- **Organization lens:** switch among fictional orgs, browse their distinct visible pool, search only consented fields, and rename an organization inside your private copy.
-- **Participant lens:** edit synthetic profiles, grant or revoke individual fields through the matrix, and inspect the reverse-chronological access feed.
-- **Postgres/Supabase core:** anonymous auth, isolated workspaces, normalized schema, RLS policies, an RLS-gated search RPC that logs reads, and resettable seed data.
-- **Security notes:** the enforcement boundary, known footguns, leakage considerations, and the deliberate limits of this demo.
+## Architecture
 
-Without Supabase environment variables, the UI remains explorable in read-only fixture mode. With Supabase configured, it uses anonymous auth and persistent per-visitor workspaces.
+```mermaid
+flowchart LR
+    B["Browser"]
+    A["Supabase anonymous auth"]
+    W["User-owned demo workspace"]
+    R["RLS-gated RPC"]
+    G["Consent grants"]
+    P["Participant attribute rows"]
+    L["Access log"]
+
+    B --> A --> W
+    W --> R
+    R --> G
+    G --> P
+    R --> L
+    R --> B
+```
+
+There are two distinct authorization layers:
+
+- `auth.uid()` isolates one visitor’s entire synthetic workspace from every other visitor.
+- Transaction-local organization or participant context determines which attribute rows the selected demo actor may read.
+
+The organization and participant selectors simulate roles *inside* the visitor’s private sandbox. They are useful for exploring behavior, but they are not a production identity model.
+
+## Implementation map
+
+- [`supabase/migrations/001_schema.sql`](supabase/migrations/001_schema.sql) — workspace-scoped relational model.
+- [`supabase/migrations/002_rls_policies.sql`](supabase/migrations/002_rls_policies.sql) — workspace isolation and consent policies.
+- [`supabase/migrations/003_seed_synthetic_data.sql`](supabase/migrations/003_seed_synthetic_data.sql) — resettable fixture and RPC boundary.
+- [`components/OrgSearchClient.tsx`](components/OrgSearchClient.tsx) — consent-aware organization search.
+- [`components/ParticipantViewClient.tsx`](components/ParticipantViewClient.tsx) — profile and grant management.
+- [`components/AccessLogFeed.tsx`](components/AccessLogFeed.tsx) — organization-level audit presentation. The database records attribute reads; the UI groups them by organization.
+- [`lib/policy.ts`](lib/policy.ts) and [`lib/visibleProfile.ts`](lib/visibleProfile.ts) — presentational mirrors of the policy, never the security boundary.
 
 ## Run locally
 
+### Read-only fixture mode
+
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Without Supabase environment variables, the interface remains explorable but mutations are disabled.
 
-For the persistent Supabase demo:
+### Persistent Supabase mode
 
-1. Create a Supabase project.
-2. In **Authentication → Providers → Anonymous Sign-Ins**, enable anonymous sign-ins.
-3. Apply the files in `supabase/migrations` in order (or run `supabase db push` after linking the project).
-4. Copy `.env.example` to `.env.local` and add the project URL and publishable/anon key.
+Prerequisites: a Supabase project and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
+
+1. Enable **Anonymous Sign-Ins** under **Authentication → Providers** in the Supabase dashboard.
+2. Link and migrate the project:
+
+   ```bash
+   supabase link --project-ref YOUR_PROJECT_REF
+   supabase db push
+   ```
+
+3. Create `.env.local` from the example:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+4. Add the project URL and publishable key:
+
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
+   ```
+
 5. Restart `npm run dev`.
 
-Never add the service-role key to the web application. It bypasses RLS and would silently remove the central guarantee.
+The project URL and publishable key are intended for browser use. The service-role/secret key is not: it bypasses RLS and must never appear in the frontend or repository.
 
-Supabase persists the anonymous session in browser storage. Refreshes keep the same workspace. Clearing site data, signing out, using private browsing, or moving to another device creates a different anonymous identity and therefore a fresh copy.
+Supabase stores the anonymous session in browser storage. Clearing site data, using private browsing, or switching browsers/devices creates a new identity and therefore a fresh workspace.
 
-## Sanity-check the boundary
+## Verification
 
-After applying the migrations, use the organization lens to search for `biosecurity` as Aqueduct and then Beacon. Aqueduct receives no match; Beacon finds Jon because only Beacon has the relevant grant. The SQL boundary test is in `supabase/tests/access_boundary.sql`.
+```bash
+npm run lint
+npm run build
+```
 
-## Why there is no AI summary
+[`supabase/tests/access_boundary.sql`](supabase/tests/access_boundary.sql) contains a focused database assertion: Aqueduct cannot read a field granted only to Beacon, while Beacon still cannot read Jon’s ungranted sensitive fields.
 
-I deliberately did not add an AI summary. In a system whose entire point is legible, consented access, an opaque generative layer works against the thesis — and record-backed determinism is the right default when the data is sensitive and the records must not be embellished. Restraint is the responsible call here.
+For a manual end-to-end check:
 
-## Documentation
+1. Revoke a field in the participant view.
+2. Open that organization’s view and verify the field is locked.
+3. Search for the revoked value and verify it produces no match.
+4. Return to the participant view and inspect the grouped audit entry.
 
-- [`docs/product-note.md`](docs/product-note.md) — product thesis, language choices, and deliberate omissions.
-- [`docs/rls-notes.md`](docs/rls-notes.md) — how the database enforcement works.
-- [`docs/threat-model-lite.md`](docs/threat-model-lite.md) — trust boundaries, leakage, revocation, and audit limits.
+## Security notes and limits
 
-## Next, deliberately not built
+- RLS is enabled on every demo table.
+- RPCs verify workspace ownership with `auth.uid()` before accepting a simulated actor.
+- Organization reads are logged per attribute; the participant UI coalesces them into one row per organization.
+- Revocation affects the next database read. It cannot recall data already delivered, copied, cached, or screenshotted.
+- Anonymous workspaces are intentionally disposable. There is no account recovery or cross-device continuity.
+- External search indexes, exports, privileged administration, retention policy, and abuse controls would require separate security decisions.
+- All people, organizations, contact details, notes, and events are synthetic.
 
-- Participant-to-identity mapping, invitations, account recovery, and SSO
-- ATS imports, deduplication, matching, and pagination
-- Participant-managed grant/revoke controls and notifications
-- AI summaries or other generated interpretations of sensitive records
+The short threat analysis is in [`docs/threat-model-lite.md`](docs/threat-model-lite.md), with implementation detail in [`docs/rls-notes.md`](docs/rls-notes.md).
+
+## Deliberate restraint
+
+There is no AI-generated profile summary. In a system whose purpose is legible, consented access to sensitive records, an opaque generative interpretation would work against the thesis. Record-backed determinism is the more responsible default here.
+
+## Not built
+
+- Real organization membership or participant-to-account identity mapping
+- Invitations, account recovery, SSO, or cross-device persistence
+- ATS imports, deduplication, matching, exports, or pagination
+- Notifications, audit retention controls, or abuse monitoring
 - Real or scraped participant data
 
-Those are meaningful systems, not decorative checklist items. They should follow evidence about the real operating constraints rather than be guessed into this slice.
+Those are meaningful systems, not decorative checklist items. They should follow evidence about the real operating constraints rather than be guessed into this demo.
