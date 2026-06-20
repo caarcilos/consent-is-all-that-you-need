@@ -127,17 +127,6 @@ begin
     (p_workspace_id,dev,aqueduct,'name','Shared directly with recruiter'),
     (p_workspace_id,dev,aqueduct,'skills','Shared directly with recruiter');
 
-  insert into public.access_log
-    (workspace_id, org_id, participant_id, attribute_key, accessed_at)
-  values
-    (p_workspace_id,aqueduct,maya,'email', now() - interval '2 minutes'),
-    (p_workspace_id,beacon,maya,'skills', now() - interval '24 minutes'),
-    (p_workspace_id,aqueduct,maya,'notes', now() - interval '74 minutes'),
-    (p_workspace_id,lattice,maya,'seeking', now() - interval '26 hours'),
-    (p_workspace_id,beacon,jon,'skills', now() - interval '8 minutes'),
-    (p_workspace_id,aqueduct,aisha,'email', now() - interval '19 minutes'),
-    (p_workspace_id,lattice,leo,'skills', now() - interval '49 minutes'),
-    (p_workspace_id,lattice,dev,'notes', now() - interval '2 days');
 end;
 $$;
 

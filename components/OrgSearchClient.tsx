@@ -6,7 +6,7 @@ import { ATTRIBUTE_KEYS, type AttributeKey } from "@/lib/types";
 import { visibleProfile, type VisibleProfile } from "@/lib/visibleProfile";
 import { ParticipantCard } from "./ParticipantCard";
 import { useDemo } from "./DemoProvider";
-import { SearchIcon, ShieldIcon } from "./icons";
+import { SearchIcon } from "./icons";
 
 type SearchRow = {
   participant_id: string;
@@ -140,9 +140,6 @@ export function OrgSearchClient() {
         </div>
       </section>
 
-      {status === "fixture"
-        ? <div className="mode-banner"><strong>Fixture mode</strong><span>Add Supabase environment variables to enable persistent editing.</span></div>
-        : <div className="trust-banner"><ShieldIcon /><strong>Private workspace · RLS enforced</strong><span>Changes persist for this anonymous browser session.</span></div>}
       {status === "error" && <div className="error-banner">{error}</div>}
 
       {status === "ready" && (

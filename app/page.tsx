@@ -88,43 +88,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <section className="no-ai-note">
-        <span className="no-ai-icon">✦</span>
-        <div>
-          <div className="eyebrow">A deliberate omission</div>
-          <h2>No AI summary.</h2>
-        </div>
-        <p>
-          In a system about legible, consented access, an opaque generative
-          layer works against the thesis. Record-backed determinism is the
-          responsible default here.
-        </p>
-      </section>
-
-      <section className="model-section">
-        <div>
-          <div className="eyebrow">Scope, honestly</div>
-          <h2>What this isn&rsquo;t.</h2>
-        </div>
-        <div className="model-copy">
-          <p>
-            Anonymous authentication now gives every visitor a private,
-            resettable copy of the synthetic world. It still has no real
-            invitations, SSO, imports, deduplication, matching, or production
-            identity model. Those are real systems that should follow evidence
-            about real constraints, not be guessed into a demo.
-          </p>
-          <p>
-            The schema, RLS policies, a boundary test, and the design notes are
-            on{" "}
-            <a href="https://github.com/caarcilos/consent-is-all-that-you-need">
-              GitHub
-            </a>
-            .
-          </p>
-        </div>
-      </section>
     </main>
   );
 }

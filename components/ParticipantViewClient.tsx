@@ -240,15 +240,11 @@ export function ParticipantViewClient() {
         </div>
       </section>
 
-      {status === "fixture"
-        ? <div className="mode-banner"><strong>Fixture mode</strong><span>Connect Supabase to edit and preserve this profile.</span></div>
-        : <div className="trust-banner"><ShieldIcon /><strong>Your private copy</strong><span>Profile and grant changes survive refreshes in this browser.</span></div>}
-
       <section className="participant-summary">
         <div className={`large-avatar ${participant.tone}`}>{participant.initials}</div>
         <div><p>Acting as</p><h2>{name}</h2><span>@{participant.handle}</span></div>
         <div className="summary-stat"><ShieldIcon /><strong>{orgCount}</strong><span>organizations with access</span></div>
-        <div className="summary-stat"><EyeIcon /><strong>{events.length}</strong><span>recorded attribute reads</span></div>
+        <div className="summary-stat"><EyeIcon /><strong>{new Set(events.map((event) => event.orgId)).size}</strong><span>organizations in your audit trail</span></div>
       </section>
 
       {status === "ready" && (

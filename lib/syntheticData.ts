@@ -65,15 +65,4 @@ export const grants: Grant[] = [
   ...(["name", "skills"] as const).map((key) => grant(dev, aqueduct, key, "Shared directly with recruiter")),
 ];
 
-const now = Date.now();
-export const accessEvents: AccessEvent[] = [
-  { id: "1", participantId: maya.id, orgId: aqueduct.id, attributeKey: "email", accessedAt: new Date(now - 2 * 60_000).toISOString() },
-  { id: "2", participantId: maya.id, orgId: beacon.id, attributeKey: "skills", accessedAt: new Date(now - 24 * 60_000).toISOString() },
-  { id: "3", participantId: maya.id, orgId: aqueduct.id, attributeKey: "notes", accessedAt: new Date(now - 74 * 60_000).toISOString() },
-  { id: "4", participantId: maya.id, orgId: lattice.id, attributeKey: "seeking", accessedAt: new Date(now - 26 * 3_600_000).toISOString() },
-  { id: "5", participantId: jon.id, orgId: beacon.id, attributeKey: "skills", accessedAt: new Date(now - 8 * 60_000).toISOString() },
-  { id: "6", participantId: jon.id, orgId: beacon.id, attributeKey: "location", accessedAt: new Date(now - 3 * 3_600_000).toISOString() },
-  { id: "7", participantId: aisha.id, orgId: aqueduct.id, attributeKey: "email", accessedAt: new Date(now - 19 * 60_000).toISOString() },
-  { id: "8", participantId: leo.id, orgId: lattice.id, attributeKey: "skills", accessedAt: new Date(now - 49 * 60_000).toISOString() },
-  { id: "9", participantId: dev.id, orgId: lattice.id, attributeKey: "notes", accessedAt: new Date(now - 2 * 86_400_000).toISOString() },
-];
+export const accessEvents: AccessEvent[] = [];
