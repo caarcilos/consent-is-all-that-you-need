@@ -30,11 +30,18 @@ function groupEventsByOrg(events: AccessEvent[]): GroupedAccess[] {
     }
   }
 
-  return Array.from(grouped.values())
-    .sort((a, b) => b.latestAccessedAt.localeCompare(a.latestAccessedAt));
+  return Array.from(grouped.values()).sort((a, b) =>
+    b.latestAccessedAt.localeCompare(a.latestAccessedAt),
+  );
 }
 
-export function AccessLogFeed({ events, orgs }: { events: AccessEvent[]; orgs: Org[] }) {
+export function AccessLogFeed({
+  events,
+  orgs,
+}: {
+  events: AccessEvent[];
+  orgs: Org[];
+}) {
   const groupedEvents = groupEventsByOrg(events);
 
   return (
@@ -43,18 +50,29 @@ export function AccessLogFeed({ events, orgs }: { events: AccessEvent[]; orgs: O
         const org = orgs.find((item) => item.id === event.orgId);
         return (
           <div className="access-event" key={event.orgId}>
-            <div className="event-icon"><EyeIcon /></div>
+            <div className="event-icon">
+              <EyeIcon />
+            </div>
             <div className="event-copy">
-              <p><strong>{org?.name ?? "Unknown organization"}</strong> viewed your profile</p>
+              <p>
+                <strong>{org?.name ?? "Unknown organization"}</strong> viewed
+                your profile
+              </p>
               <div className="viewed-fields">
-                {event.fields.map((field) => <em key={field}>{titleCase(field)}</em>)}
+                {event.fields.map((field) => (
+                  <em key={field}>{titleCase(field)}</em>
+                ))}
               </div>
               <span>{relativeTime(event.latestAccessedAt)}</span>
             </div>
           </div>
         );
       })}
-      {!groupedEvents.length && <div className="empty-log">No organizations have viewed this participant yet.</div>}
+      {!groupedEvents.length && (
+        <div className="empty-log">
+          No reads yet (explore the organization lens to generate some)
+        </div>
+      )}
     </div>
   );
 }
