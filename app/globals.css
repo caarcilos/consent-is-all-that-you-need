@@ -80,10 +80,6 @@ nav a:hover { color: var(--green); }
   content: ""; position: absolute; width: 420px; height: 420px; border: 1px solid rgba(201,181,255,.3);
   border-radius: 50%; right: 7vw; top: 80px; box-shadow: 0 0 0 70px rgba(124,58,237,.08), 0 0 0 140px rgba(3,76,211,.05);
 }
-.hero::before {
-  content: "CONSENT"; position: absolute; z-index: 1; right: 7vw; top: 260px;
-  color: rgba(201,181,255,.2); font: 500 46px/1 "DM Mono"; letter-spacing: .22em; transform: rotate(-8deg);
-}
 .eyebrow {
   color: var(--purple); text-transform: uppercase; letter-spacing: .14em;
   font: 500 11px/1.4 "DM Mono", monospace;
