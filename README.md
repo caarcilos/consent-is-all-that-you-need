@@ -6,6 +6,8 @@ Most talent systems are black boxes about who can see a person’s data. `consen
 
 This is intentionally a tight slice. It uses eight synthetic participants and three fictional organizations to make one hard thing inspectable rather than pretending to be a complete ATS.
 
+Each visitor signs in anonymously through Supabase and receives an isolated copy of that synthetic dataset. Profile edits, organization renames, consent grants, revocations, searches, and access logs persist across refreshes in that browser. **Reset demo** restores only that visitor’s copy.
+
 ## The modeling decision
 
 PostgreSQL row-level security protects rows, not individual columns. A conventional wide `participants` table would therefore force field-level permissions into application filtering.
@@ -24,12 +26,12 @@ That also makes search consent-respecting by construction. Search runs over the 
 
 ## What is here
 
-- **Organization lens:** switch among fictional orgs, browse their distinct visible pool, and search only consented fields. Missing grants stay visible as locked placeholders without exposing values.
-- **Participant lens:** inspect a field × organization grant matrix with the human-readable basis for every grant, plus a reverse-chronological access feed.
-- **Postgres/Supabase core:** normalized schema, RLS policies, an RLS-gated search RPC that logs reads, a participant glass-box RPC, and deterministic synthetic seed data.
+- **Organization lens:** switch among fictional orgs, browse their distinct visible pool, search only consented fields, and rename an organization inside your private copy.
+- **Participant lens:** edit synthetic profiles, grant or revoke individual fields through the matrix, and inspect the reverse-chronological access feed.
+- **Postgres/Supabase core:** anonymous auth, isolated workspaces, normalized schema, RLS policies, an RLS-gated search RPC that logs reads, and resettable seed data.
 - **Security notes:** the enforcement boundary, known footguns, leakage considerations, and the deliberate limits of this demo.
 
-The checked-in UI runs from the same deterministic synthetic fixture as the SQL seed, so it is immediately explorable without credentials. The migrations are the production data contract and can be applied to Supabase when wiring a hosted instance.
+Without Supabase environment variables, the UI remains explorable in read-only fixture mode. With Supabase configured, it uses anonymous auth and persistent per-visitor workspaces.
 
 ## Run locally
 
@@ -40,33 +42,21 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-For a Supabase-backed deployment:
+For the persistent Supabase demo:
 
-1. Create a project and apply the files in `supabase/migrations` in order.
-2. Copy `.env.example` to `.env.local` and add the project URL and anon key.
-3. Call `search_pool(org_slug, query)` from the server-side route that supplies the org context.
-4. Deploy to Vercel with the same two public environment variables.
+1. Create a Supabase project.
+2. In **Authentication → Providers → Anonymous Sign-Ins**, enable anonymous sign-ins.
+3. Apply the files in `supabase/migrations` in order (or run `supabase db push` after linking the project).
+4. Copy `.env.example` to `.env.local` and add the project URL and publishable/anon key.
+5. Restart `npm run dev`.
 
 Never add the service-role key to the web application. It bypasses RLS and would silently remove the central guarantee.
 
+Supabase persists the anonymous session in browser storage. Refreshes keep the same workspace. Clearing site data, signing out, using private browsing, or moving to another device creates a different anonymous identity and therefore a fresh copy.
+
 ## Sanity-check the boundary
 
-After applying the migrations, exercise the security boundary as the `anon` or `authenticated` role:
-
-```sql
-select set_config(
-  'app.current_org_id',
-  '10000000-0000-0000-0000-000000000001',
-  true
-);
-select key, value
-from participant_attributes
-where participant_id = '20000000-0000-0000-0000-000000000002';
-```
-
-Aqueduct receives no rows for Jon. Change the context to Beacon (`…0002`) and the same query returns `name`, `location`, `skills`, and `seeking`—never `email` or `notes`.
-
-The repository also includes [`supabase/tests/access_boundary.sql`](supabase/tests/access_boundary.sql), a small executable assertion of that exact boundary.
+After applying the migrations, use the organization lens to search for `biosecurity` as Aqueduct and then Beacon. Aqueduct receives no match; Beacon finds Jon because only Beacon has the relevant grant. The SQL boundary test is in `supabase/tests/access_boundary.sql`.
 
 ## Why there is no AI summary
 
@@ -80,7 +70,7 @@ I deliberately did not add an AI summary. In a system whose entire point is legi
 
 ## Next, deliberately not built
 
-- Real authentication, participant-to-identity mapping, invitations, and SSO
+- Participant-to-identity mapping, invitations, account recovery, and SSO
 - ATS imports, deduplication, matching, and pagination
 - Participant-managed grant/revoke controls and notifications
 - AI summaries or other generated interpretations of sensitive records

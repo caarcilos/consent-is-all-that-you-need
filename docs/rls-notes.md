@@ -20,11 +20,13 @@ The actual migration uses `nullif(..., '')::uuid` so a missing setting fails clo
 
 ## Request context
 
-`search_pool` resolves a supplied organization slug, sets `app.current_org_id` transaction-locally, queries the pool, and appends access-log records in one RPC. The function is `SECURITY INVOKER`: it does not acquire owner privileges, so the caller remains subject to RLS.
+`search_pool` verifies that the selected organization belongs to the authenticated user’s demo workspace, sets `app.current_org_id` transaction-locally, queries the pool, and appends access-log records in one RPC. The function is `SECURITY INVOKER`: it does not acquire owner privileges, so the caller remains subject to RLS.
 
-In a production application, a trusted server route must derive the organization from the authenticated session. Accepting an arbitrary organization selector is acceptable only for this synthetic demonstration.
+The selector is intentionally a simulated role inside one user-owned synthetic workspace. Workspace ownership is derived from `auth.uid()` and cannot be selected. In a production multi-user application, organization membership and participant identity would also be derived from verified account relationships rather than dropdowns.
 
-The participant RPC follows the same context pattern. Its handle selector is explicitly demo-only; production should map `auth.uid()` to one participant and refuse caller-supplied identity context.
+The participant RPC follows the same context pattern. Its participant selector is explicitly demo-only; production should map `auth.uid()` to one participant and refuse caller-supplied identity context.
+
+Anonymous users use Supabase’s `authenticated` Postgres role. Their stable `auth.uid()` owns one `demo_workspaces` row. All organizations, participants, grants, attributes, and access events carry that workspace ID, preventing one visitor from reading or mutating another visitor’s copy.
 
 ## Database truth, presentational mirror
 
@@ -33,7 +35,7 @@ The participant RPC follows the same context pattern. Its handle selector is exp
 The safe sequence is:
 
 1. A request establishes verified tenant context.
-2. A query runs as `anon` or `authenticated`.
+2. The anonymous user’s JWT runs the query as `authenticated`.
 3. RLS removes unauthorized attribute rows.
 4. UI code places returned rows into a six-field presentation model.
 

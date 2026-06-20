@@ -1,10 +1,23 @@
 import { grantForKey } from "@/lib/policy";
-import { orgs } from "@/lib/syntheticData";
-import { ATTRIBUTE_KEYS, type Grant } from "@/lib/types";
+import { ATTRIBUTE_KEYS, type AttributeKey, type Grant, type Org } from "@/lib/types";
 import { titleCase } from "@/lib/format";
 import { LockIcon } from "./icons";
 
-export function GrantMatrix({ participantGrants }: { participantGrants: Grant[] }) {
+type GrantMatrixProps = {
+  orgs: Org[];
+  participantGrants: Grant[];
+  editable?: boolean;
+  savingCell?: string | null;
+  onToggle?: (org: Org, key: AttributeKey, grant: Grant | undefined) => void;
+};
+
+export function GrantMatrix({
+  orgs,
+  participantGrants,
+  editable = false,
+  savingCell,
+  onToggle,
+}: GrantMatrixProps) {
   return (
     <div className="matrix-wrap">
       <table className="grant-matrix">
@@ -15,7 +28,24 @@ export function GrantMatrix({ participantGrants }: { participantGrants: Grant[] 
               <th>{titleCase(key)}{(key === "email" || key === "notes") && <span className="sensitive-dot" title="Sensitive field" />}</th>
               {orgs.map((org) => {
                 const grant = grantForKey(participantGrants.filter((item) => item.orgId === org.id), key);
-                return <td key={org.id}>{grant ? <div className="grant-cell"><span>✓ Granted</span><small>{grant.basis}</small></div> : <div className="no-grant"><LockIcon /><span>Not shared</span></div>}</td>;
+                const cellId = `${org.id}:${key}`;
+                const content = grant
+                  ? <div className="grant-cell"><span>✓ Granted</span><small>{grant.basis}</small>{editable && <b>Click to revoke</b>}</div>
+                  : <div className="no-grant"><LockIcon /><span>Not shared</span>{editable && <b>Click to grant</b>}</div>;
+                return (
+                  <td key={org.id}>
+                    {editable
+                      ? <button
+                          className="grant-toggle"
+                          onClick={() => onToggle?.(org, key, grant)}
+                          disabled={savingCell === cellId}
+                          aria-label={`${grant ? "Revoke" : "Grant"} ${key} for ${org.name}`}
+                        >
+                          {savingCell === cellId ? <span className="cell-saving">Saving…</span> : content}
+                        </button>
+                      : content}
+                  </td>
+                );
               })}
             </tr>
           ))}

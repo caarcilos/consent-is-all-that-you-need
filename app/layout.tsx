@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { AppHeader } from "@/components/AppHeader";
+import { DemoProvider } from "@/components/DemoProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,23 +11,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>
-        <header className="site-header">
-          <Link className="brand" href="/">
-            <span className="brand-mark" aria-hidden="true">◎</span>
-            <span>consent-lens</span>
-          </Link>
-          <nav aria-label="Primary navigation">
-            <Link href="/org-search">Org view</Link>
-            <Link href="/participant">Participant view</Link>
-            <a href="https://github.com" target="_blank" rel="noreferrer" aria-label="Project source">↗ Source</a>
-          </nav>
-        </header>
-        {children}
-        <footer>
-          <span>Built with synthetic people and fictional organizations.</span>
-          <span>RLS is the gate. The UI is only the glass.</span>
-        </footer>
+      <body suppressHydrationWarning>
+        <DemoProvider>
+          <AppHeader />
+          {children}
+          <footer>
+            <span>Built with synthetic people and fictional organizations.</span>
+            <span>RLS is the gate. The UI is only the glass.</span>
+          </footer>
+        </DemoProvider>
       </body>
     </html>
   );

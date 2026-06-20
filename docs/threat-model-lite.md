@@ -2,7 +2,7 @@
 
 ## Trust boundaries
 
-The browser and its organization/participant selectors are untrusted. A trusted server must bind request context to an authenticated identity before invoking database RPCs.
+The browser and its organization/participant selectors are untrusted. Supabase verifies the anonymous session, and every RPC verifies workspace ownership through `auth.uid()` before accepting a simulated role.
 
 Postgres RLS is the authorization boundary. UI locks, disabled controls, and TypeScript policy helpers are explanatory affordances, never gates.
 
@@ -28,7 +28,7 @@ Moving search to a global external index would reopen this risk. The index must 
 
 Deleting a grant changes the next database read immediately. A response already delivered, browser cache, export, screenshot, or downstream copy cannot be recalled by RLS.
 
-Production responses should use restrictive caching headers, and export/download features need separate consent and retention decisions.
+Production responses should use restrictive caching headers, and export/download features need separate consent and retention decisions. Clearing browser storage also makes an anonymous workspace inaccessible to that visitor; optional account linking is the future recovery path.
 
 ## Audit and repudiation
 

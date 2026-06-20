@@ -23,6 +23,8 @@ The demo does not attempt to prove that a talent marketplace can be made feature
 
 The strongest interaction is switching organizations and seeing the same pool change. The second is switching to the participant view and seeing the exact grants and access trail that produced those differences.
 
+Anonymous Supabase auth makes the model editable without turning it into a shared vandalism surface. Every visitor gets a private synthetic workspace that survives refreshes, and the reset control intentionally restores only that workspace.
+
 ## A deliberate no on AI summaries
 
 I deliberately did not add an AI summary. In a system whose entire point is legible, consented access, an opaque generative layer works against the thesis — and record-backed determinism is the right default when the data is sensitive and the records must not be embellished. Restraint is the responsible call here.
@@ -31,6 +33,6 @@ An AI layer would also create new questions that this slice should not wave away
 
 ## What I would build next
 
-First: real authentication that binds organization and participant context to verified identities, plus participant-facing grant and revoke controls. Then notifications, access-log retention controls, pagination, and operational tooling for reviewing unusual access patterns.
+First: account linking and a production identity model that binds real organization membership and participant identity to verified accounts. Then notifications, access-log retention controls, pagination, and operational tooling for reviewing unusual access patterns.
 
 ATS import, deduplication, matching, and generated summaries would come only after learning the actual workflow and governance requirements. No real or scraped participant data should enter the system before those controls exist.
